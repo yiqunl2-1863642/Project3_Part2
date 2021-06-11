@@ -1,0 +1,88 @@
+---
+title: "Project 3: Project3Package Tutorial"
+author: "Ethan Liu"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Project3Package Tutorial}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(Project3Package)
+```
+
+```{r message=FALSE}
+# load the necessary package
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(reshape2)
+library(tidyverse)
+```
+
+## Introduction
+
+This package includes four fucntions: my_t.test, my_lm, my_knn_cv, and my_rf_cv. You can install it from Github using:
+
+```{r eval=FALSE}
+devtools::install_github("yiqunl2-1863642/Project3Package")
+```
+
+```{r warning=FALSE}
+my_penguins <- read_csv("../Data/my_penguins.csv")
+source("../Code/my_rf_cv.R")
+```
+
+## Tutorial for my_rf_cv
+`my_rf_cv` performs a random forest prediction algorithm, and then use a k fold cross validation to evaluation the prediction model. It specifically focuses on `my_penguins` data and does not work on any other data. It takes an numeric input `k` indicating the number of folds and it returns a numeric output representing the cross validation error. Below is an example of how to use it using different k including 2, 5, 10. Since random forest is a random process, we will repeat each k with 30 trials. We will also create a boxplot graphing the cv error for each k, and will also use a table to demonstrate the mean and standard deviation of each k.
+
+```{r fig.width=7, fig.height=4}
+# initialize the matrix
+m <- data.frame(matrix(nrow = 30, ncol = 3))
+mean_err <- rep(0, 3)
+std_err <- rep(0, 3)
+# perform the 3*30 trials of cross validation
+for (i in c(2, 5, 10)) {
+  for (j in 1:30) {
+    if (i == 2) {
+      m[j, 1] <- my_rf_cv(i)
+    } else if (i == 5) {
+      m[j, 2] <- my_rf_cv(i)
+    } else {
+      m[j, 3] <- my_rf_cv(i)
+    }
+  }
+}
+# records the mean error and standard deviation of errors
+for (i in 1:3) {
+  mean_err[i] <- mean(m[,i])
+  std_err[i] <- sd(m[,i])
+}
+# plot the boxplots comparing errors among different k
+colnames(m) <- c(2, 5, 10)
+ggplot(stack(m),
+       aes(x = ind, y=values)) +
+  geom_boxplot(fill="lightblue") +
+  theme_bw(base_size = 20) +
+  labs(title = "CV error for k = 2, 5, 10", xlab = "k", ylab="cv error") +
+  theme(plot.title =
+          element_text(hjust = 0.5))
+# create the table of mean error and standard deviation of error
+t <- data.frame(
+  "mean" = mean_err,
+  "std" = std_err
+)
+t
+ggsave("plot.png", path="../Output/Figures")
+saveRDS(t, file="../Output/Results/table.rds")
+write_csv(m, file="../Output/Results/results.csv")
+```
+In general as k increases there is less bias towards estimating the true error of our model, but higher variance. Judging from the boxplot and the table, Both the mean error and the standard deviation of the error is decreasing as the number of folds increases. This happens because the k is relatively small and increasing it significantly improve both the bias and the variance.
